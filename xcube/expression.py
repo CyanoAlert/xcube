@@ -23,13 +23,17 @@ import ast
 import warnings
 from typing import Dict, Any
 
+from .perf import time_it
+
 
 def compute_array_expr(expr: str,
                        namespace: Dict[str, Any] = None,
                        errors: str = 'raise',
                        result_name: str = None):
-    expr = transpile_expr(expr, warn=errors == 'warn')
-    return compute_expr(expr, namespace=namespace, errors=errors, result_name=result_name)
+    with time_it('compute_array_expr'):
+        expr = transpile_expr(expr, warn=errors == 'warn')
+        array = compute_expr(expr, namespace=namespace, errors=errors, result_name=result_name)
+    return array
 
 
 def compute_expr(expr: str,

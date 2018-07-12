@@ -43,7 +43,7 @@ class MaskSetTest(unittest.TestCase):
         for index, name, mask, data in validation_data:
             self.assertIs(mask, mask_set[index])
             self.assertIs(mask, mask_set[name])
-            assert_array_almost_equal(mask.values, data)
+            assert_array_almost_equal(mask, data)
 
     def test_get_mask_sets(self):
         dataset = create_highroc_dataset()

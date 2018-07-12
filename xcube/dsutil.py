@@ -31,6 +31,7 @@ import xarray as xr
 from .config import NameDictPairList, to_resolved_name_dict_pairs
 from .expression import compute_array_expr
 from .maskset import MaskSet
+from .perf import time_it
 
 REF_DATETIME_STR = '1970-01-01 00:00:00'
 REF_DATETIME = pd.to_datetime(REF_DATETIME_STR)
@@ -110,10 +111,14 @@ def compute_dataset(dataset: xr.Dataset,
                                             result_name=f'valid mask for {var_name!r}',
                                             errors=errors)
             if valid_mask is not None:
-                masked_var = var.where(valid_mask)
-                if hasattr(masked_var, 'attrs'):
-                    masked_var.attrs.update(var_props)
-                namespace[var_name] = masked_var
+                with time_it(label='masking'):
+                    # # This is 10x slower:
+                    # masked_var = var.where(valid_mask)
+                    # if hasattr(masked_var, 'attrs'):
+                    #     masked_var.attrs.update(var_props)
+                    masked_array = np.where(valid_mask, var.values, float('nan'))
+                    masked_var = xr.DataArray(masked_array, dims=var.dims, coords=var.coords, attrs=var_props)
+                    namespace[var_name] = masked_var
 
     computed_dataset = dataset.copy()
     for name, value in namespace.items():
@@ -210,8 +215,8 @@ def add_time_coords(dataset: xr.Dataset, time_range: Tuple[float, float]) -> xr.
 
 
 def get_time_in_days_since_1970(time_str: str, pattern=None) -> float:
-    datetime = pd.to_datetime(time_str, format=pattern, infer_datetime_format=True)
-    timedelta = datetime - REF_DATETIME
+    dt = pd.to_datetime(time_str, format=pattern, infer_datetime_format=True)
+    timedelta = dt - REF_DATETIME
     return timedelta.days + timedelta.seconds / SECONDS_PER_DAY + timedelta.microseconds / MICROSECONDS_PER_DAY
 
 

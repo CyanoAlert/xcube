@@ -93,7 +93,7 @@ class MaskSet:
     def __getattr__(self, name: str) -> Any:
         if name not in self._flags:
             raise AttributeError(name)
-        return self.get_mask(name)
+        return self.get_mask(name).values
 
     def __getitem__(self, item):
         try:
@@ -104,28 +104,29 @@ class MaskSet:
             name = item
             if name not in self._flags:
                 raise KeyError(item)
-        return self.get_mask(name)
+        return self.get_mask(name).values
 
     def get_mask(self, flag_name: str):
         if flag_name not in self._flags:
             raise ValueError('invalid flag name "%s"' % flag_name)
 
         if flag_name in self._masks:
-            return self._masks[flag_name]
-
-        flag_var = self._flag_var
-        flag_mask, flag_value = self._flags[flag_name]
-
-        mask_var = xr.DataArray(np.ones(flag_var.shape, dtype=np.uint8), dims=flag_var.dims, name=flag_name)
-        if flag_mask is not None:
-            if flag_value is not None:
-                mask_var = mask_var.where((flag_var & flag_mask) == flag_value, 0)
-            else:
-                mask_var = mask_var.where((flag_var & flag_mask) != 0, 0)
+            mask_var = self._masks[flag_name]
         else:
-            mask_var = mask_var.where(flag_var == flag_value, 0)
+            flag_var = self._flag_var
+            flag_mask, flag_value = self._flags[flag_name]
 
-        self._masks[flag_name] = mask_var
+            mask_var = xr.DataArray(np.ones(flag_var.shape, dtype=np.uint8), dims=flag_var.dims, name=flag_name)
+            if flag_mask is not None:
+                if flag_value is not None:
+                    mask_var = mask_var.where((flag_var & flag_mask) == flag_value, 0)
+                else:
+                    mask_var = mask_var.where((flag_var & flag_mask) != 0, 0)
+            else:
+                mask_var = mask_var.where(flag_var == flag_value, 0)
+
+            self._masks[flag_name] = mask_var
+
         return mask_var
 
 
